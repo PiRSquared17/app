@@ -1280,6 +1280,12 @@ $wgAdDriverUseAdsAfterInfobox = false;
 $wgAdDriverUseTaboola = false;
 
 /**
+ * @name $wgAdDriverUseTurtle
+ * Whether to enable AdProviderTurtle (true) or not (false)
+ */
+$wgAdDriverUseTurtle = false;
+
+/**
  * @name $wgAdDriverAlwaysCallDartInCountries
  * Disables the max N calls to DART and enables Remnant GPT call in those countries.
  * This is an instant globals, which means you set it only on community and it takes

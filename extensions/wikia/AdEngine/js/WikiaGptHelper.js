@@ -4,14 +4,16 @@ define('ext.wikia.adEngine.wikiaGptHelper', [
 	'wikia.log',
 	'wikia.window',
 	'wikia.document',
+	'wikia.lazyqueue',
 	'ext.wikia.adEngine.adLogicPageParams',
 	'ext.wikia.adEngine.gptSlotConfig',
 	'ext.wikia.adEngine.wikiaGptAdDetect'
-], function (log, window, document, adLogicPageParams, gptSlotConfig, gptAdDetect) {
+], function (log, window, document, lazyQueue, adLogicPageParams, gptSlotConfig, gptAdDetect) {
 	'use strict';
 
 	var logGroup = 'ext.wikia.adEngine.wikiaGptHelper',
 		gptLoaded = false,
+		defineSlotsQueue = [],
 		slotQueue = [],
 		gptSlots = {},
 		dataAttribs = {},
@@ -58,7 +60,8 @@ define('ext.wikia.adEngine.wikiaGptHelper', [
 	function setPageLevelParams() {
 		var name,
 			value,
-			pageLevelParams = adLogicPageParams.getPageLevelParams();
+			pageLevelParams = adLogicPageParams.getPageLevelParams(),
+			serializedParams = JSON.stringify(pageLevelParams);
 
 		log(['setPageLevelParams', pageLevelParams], 'debug', logGroup);
 
@@ -71,23 +74,60 @@ define('ext.wikia.adEngine.wikiaGptHelper', [
 				}
 			}
 		}
+
+		for(name in dataAttribs) {
+			if (dataAttribs.hasOwnProperty(name)) {
+				dataAttribs[name]['data-gpt-page-params'] = serializedParams;
+			}
+		}
 	}
 
-	function defineSlots() {
+	function defineSlot(slotPath, slotNameGpt, slotParams) {
+		var slot,
+			name,
+			value,
+			sizes = convertSizesToGpt(slotParams.size);
+
+		log(['defineSlots', 'googletag.defineSlot', slotPath, slotNameGpt], 'debug', logGroup);
+
+		if (slotParams.pos.match(/TOP_LEADERBOARD/)) {
+			sizes = filterOutSizesBiggerThanScreenSize(sizes);
+		}
+
+		slot = googletag.defineSlot(slotPath + '/' + slotNameGpt, sizes, slotNameGpt);
+		slot.addService(pubads);
+
+		delete slotParams.size;
+
+		for (name in slotParams) {
+			if (slotParams.hasOwnProperty(name)) {
+				value = slotParams[name];
+				if (value) {
+					log(['defineSlots', 'slot.setTargeting', name, value], 'debug', logGroup);
+					slot.setTargeting(name, value);
+				}
+			}
+		}
+
+		gptSlots[slotNameGpt] = slot;
+
+		dataAttribs[slotNameGpt] = {
+			'data-gpt-slot-params': JSON.stringify(slotParams),
+			'data-gpt-slot-sizes': JSON.stringify(sizes)
+		};
+
+		log(['defineSlots', 'defined slot', slotNameGpt, slot], 'debug', logGroup);
+	}
+
+	function defineWikiaSlots() {
 		var	pageLevelParams = adLogicPageParams.getPageLevelParams(),
 			providerSlotMap = gptSlotConfig.getConfig(),
-			path = '/5441/wka.' + pageLevelParams.s0 + '/' + pageLevelParams.s1 + '//' + pageLevelParams.s2,
-			slotname,
-			slotnameGpt,
-			sizes,
-			slot,
+			slotPath = '/5441/wka.' + pageLevelParams.s0 + '/' + pageLevelParams.s1 + '//' + pageLevelParams.s2,
+			slotName,
+			slotNameGpt,
 			slotMap,
 			slotMapSrc,
-			slotItem,
-			slotPath,
-			slotParams,
-			name,
-			value;
+			slotParams;
 
 		log(['defineSlots', providerSlotMap], 'info', logGroup);
 
@@ -96,48 +136,17 @@ define('ext.wikia.adEngine.wikiaGptHelper', [
 
 				slotMap = providerSlotMap[slotMapSrc];
 
-				for (slotname in slotMap) {
-					if (slotMap.hasOwnProperty(slotname) && slotMap[slotname].size) {
-						log(['defineSlots', 'defining slot', slotname], 'debug', logGroup);
+				for (slotName in slotMap) {
+					if (slotMap.hasOwnProperty(slotName) && slotMap[slotName].size) {
+						log(['defineSlots', 'defining slot', slotName], 'debug', logGroup);
 
-						slotnameGpt = slotname + '_' + slotMapSrc;
-						slotItem = slotMap[slotname];
+						slotNameGpt = slotName + '_' + slotMapSrc;
+						slotParams = slotMap[slotName];
 
-						sizes = convertSizesToGpt(slotItem.size);
+						slotParams.pos = slotParams.pos || slotName;
+						slotParams.src = slotMapSrc;
 
-						if (slotname.match(/TOP_LEADERBOARD/)) {
-							sizes = filterOutSizesBiggerThanScreenSize(sizes);
-						}
-
-						slotPath = path + '/' + slotnameGpt;
-
-						log(['defineSlots', 'googletag.defineSlot', slotPath, sizes, slotnameGpt], 'debug', logGroup);
-						slot = googletag.defineSlot(slotPath, sizes, slotnameGpt);
-						slot.addService(pubads);
-
-						delete slotItem.size;
-						slotItem.pos = slotItem.pos || slotname;
-						slotItem.src = slotMapSrc;
-
-						for (name in slotItem) {
-							if (slotItem.hasOwnProperty(name)) {
-								value = slotItem[name];
-								if (value) {
-									log(['defineSlots', 'slot.setTargeting', name, value], 'debug', logGroup);
-									slot.setTargeting(name, value);
-								}
-							}
-						}
-
-						gptSlots[slotnameGpt] = slot;
-
-						dataAttribs[slotnameGpt] = {
-							'data-gpt-page-params': JSON.stringify(pageLevelParams),
-							'data-gpt-slot-params': JSON.stringify(slotItem),
-							'data-gpt-slot-sizes': JSON.stringify(sizes)
-						};
-
-						log(['defineSlots', 'defined slot', slotname, slot], 'debug', logGroup);
+						defineSlot(slotPath, slotNameGpt, slotParams);
 					}
 				}
 			}
@@ -172,8 +181,9 @@ define('ext.wikia.adEngine.wikiaGptHelper', [
 			googletag.cmd.push(function () {
 				pubads = googletag.pubads();
 
+				defineSlotsQueue.start();
+				defineWikiaSlots();
 				setPageLevelParams();
-				defineSlots();
 
 				pubads.collapseEmptyDivs();
 				pubads.enableSingleRequest();
@@ -183,6 +193,11 @@ define('ext.wikia.adEngine.wikiaGptHelper', [
 
 				log(['loadGpt', 'googletag.cmd.push', 'done'], 'debug', logGroup);
 			});
+
+			lazyQueue.makeQueue(defineSlotsQueue, function(args){
+				defineSlot.apply(this, args);
+			});
+
 		}
 	}
 
@@ -270,6 +285,9 @@ define('ext.wikia.adEngine.wikiaGptHelper', [
 	}
 
 	return {
+		defineSlot: function() {
+			defineSlotsQueue.push([].slice.apply(arguments));
+		},
 		pushAd: pushAd,
 		flushAds: flushAds
 	};

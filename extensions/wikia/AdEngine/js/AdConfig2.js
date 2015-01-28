@@ -14,7 +14,8 @@ define('ext.wikia.adEngine.adConfig', [
 
 	// adProviders
 	'ext.wikia.adEngine.provider.directGpt',
-	'ext.wikia.adEngine.provider.later'
+	'ext.wikia.adEngine.provider.later',
+	'ext.wikia.adEngine.provider.turtle'
 ], function (
 	// regular dependencies
 	log,
@@ -30,7 +31,8 @@ define('ext.wikia.adEngine.adConfig', [
 
 	// adProviders
 	adProviderDirectGpt,
-	adProviderLater
+	adProviderLater,
+	adProviderTurtle
 ) {
 	'use strict';
 
@@ -123,6 +125,14 @@ define('ext.wikia.adEngine.adConfig', [
 			if (evolveSlotConfig.canHandleSlot(slotname)) {
 				log(['getProvider', slotname, 'Later (Evolve)'], 'info', logGroup);
 				return [adProviderLater];
+			}
+		}
+
+		// Next Turtle (FI', 'SE', 'DK', 'NO' traffic)
+		if (context.providers.turtle && ['FI', 'SE', 'DK', 'NO'].indexOf(country) > -1 ) {
+			if (adProviderTurtle.canHandleSlot(slotname)) {
+				log(['getProvider', slotname, 'Turtle->Later'], 'info', logGroup);
+				return [adProviderTurtle, adProviderLater];
 			}
 		}
 

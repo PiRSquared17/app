@@ -63,6 +63,7 @@ class AdEngine2ContextService {
 					'sevenOneMedia' => !!$wg->AdDriverUseSevenOneMedia,
 					'sevenOneMediaCombinedUrl' => $sevenOneMediaCombinedUrl,
 					'taboola' => !!$wg->AdDriverUseTaboola,
+					'turtle' => !!$wg->AdDriverUseTurtle,
 				] ),
 				'slots' => $this->filterOutEmptyItems( [
 					'bottomLeaderboardImpressionCapping' => $wg->AdDriverBottomLeaderboardImpressionCapping
