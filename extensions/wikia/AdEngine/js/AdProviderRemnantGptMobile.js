@@ -9,7 +9,8 @@ define('ext.wikia.adEngine.provider.remnantGptMobile', [
 	'use strict';
 
 	var logGroup = 'ext.wikia.adEngine.provider.remnantGptMobile',
-		slotMap = gptSlotConfig.getConfig('mobile_remnant');
+		srcName = 'mobile_remnant',
+		slotMap = gptSlotConfig.getConfig(srcName);
 
 	function canHandleSlot(slotname) {
 		return !!slotMap[slotname];
@@ -27,9 +28,11 @@ define('ext.wikia.adEngine.provider.remnantGptMobile', [
 			success();
 		}
 
-		wikiaGpt.pushAd(slotname, showAdAndCallSuccess, hopToNull, 'mobile_remnant');
+		wikiaGpt.pushAd(slotname, showAdAndCallSuccess, hopToNull, srcName);
 		wikiaGpt.flushAds();
 	}
+
+	wikiaGpt.defineSlots('wikia', gptSlotConfig.getConfig(srcName), srcName);
 
 	return {
 		name: 'RemnantGptMobile',

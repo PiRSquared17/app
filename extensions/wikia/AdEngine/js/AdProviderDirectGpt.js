@@ -185,6 +185,8 @@ define('ext.wikia.adEngine.provider.directGpt', [
 		}
 	}
 
+	wikiaGpt.defineSlots('wikia', slotMapConfig.getConfig(srcName), srcName);
+
 	return {
 		name: 'DirectGpt',
 		fillInSlot: fillInSlot,

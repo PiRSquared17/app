@@ -8,7 +8,8 @@ define('ext.wikia.adEngine.provider.directGptMobile', [
 	'use strict';
 
 	var logGroup = 'ext.wikia.adEngine.provider.directGptMobile',
-		slotMap = gptSlotConfig.getConfig('mobile');
+		srcName = 'mobile',
+		slotMap = gptSlotConfig.getConfig(srcName);
 
 	function canHandleSlot(slotname) {
 		return !!slotMap[slotname];
@@ -26,9 +27,11 @@ define('ext.wikia.adEngine.provider.directGptMobile', [
 			hop({method: 'hop'});
 		}
 
-		wikiaGpt.pushAd(slotname, showAdAndCallSuccess, doHop, 'mobile');
+		wikiaGpt.pushAd(slotname, showAdAndCallSuccess, doHop, srcName);
 		wikiaGpt.flushAds();
 	}
+
+	wikiaGpt.defineSlots('wikia', gptSlotConfig.getConfig(srcName), srcName);
 
 	return {
 		name: 'DirectGptMobile',

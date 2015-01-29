@@ -11,6 +11,7 @@ define('ext.wikia.adEngine.wikiaGptHelper', [
 ], function (log, window, document, lazyQueue, adLogicPageParams, gptSlotConfig, gptAdDetect) {
 	'use strict';
 
+
 	var logGroup = 'ext.wikia.adEngine.wikiaGptHelper',
 		gptLoaded = false,
 		defineSlotsQueue = [],
@@ -19,6 +20,11 @@ define('ext.wikia.adEngine.wikiaGptHelper', [
 		dataAttribs = {},
 		googletag,
 		pubads,
+		pageLevelParams = adLogicPageParams.getPageLevelParams(),
+		slotPaths = {
+			wikia: '/5441/wka.' + pageLevelParams.s0 + '/' + pageLevelParams.s1 + '//' + pageLevelParams.s2,
+			turtle: '/98544404/Wikia/Testing'
+		},
 		fallbackSize = [1, 1]; // Size to return if there are no sizes matching the screen dimensions
 
 	function convertSizesToGpt(slotsize) {
@@ -119,41 +125,31 @@ define('ext.wikia.adEngine.wikiaGptHelper', [
 		log(['defineSlots', 'defined slot', slotNameGpt, slot], 'debug', logGroup);
 	}
 
-	function defineWikiaSlots() {
-		var	pageLevelParams = adLogicPageParams.getPageLevelParams(),
-			providerSlotMap = gptSlotConfig.getConfig(),
-			slotPath = '/5441/wka.' + pageLevelParams.s0 + '/' + pageLevelParams.s1 + '//' + pageLevelParams.s2,
-			slotName,
+	function defineSlots(pathName, slotMap, slotMapSrc) {
+		var	slotName,
 			slotNameGpt,
-			slotMap,
-			slotMapSrc,
-			slotParams;
+			slotParams,
+			slotPath = slotPaths[pathName];
 
-		log(['defineSlots', providerSlotMap], 'info', logGroup);
+		log(['defineSlots', slotPath, slotMap, slotMapSrc], 'info', logGroup);
+			for (slotName in slotMap) {
+				if (slotMap.hasOwnProperty(slotName) && slotMap[slotName].size) {
+					log(['defineSlots', 'defining slot', slotName], 'debug', logGroup);
 
-		for (slotMapSrc in providerSlotMap) {
-			if (providerSlotMap.hasOwnProperty(slotMapSrc)) {
+					slotNameGpt = slotName + '_' + slotMapSrc;
+					slotParams = slotMap[slotName];
 
-				slotMap = providerSlotMap[slotMapSrc];
+					slotParams.pos = slotParams.pos || slotName;
+					slotParams.src = slotMapSrc;
 
-				for (slotName in slotMap) {
-					if (slotMap.hasOwnProperty(slotName) && slotMap[slotName].size) {
-						log(['defineSlots', 'defining slot', slotName], 'debug', logGroup);
-
-						slotNameGpt = slotName + '_' + slotMapSrc;
-						slotParams = slotMap[slotName];
-
-						slotParams.pos = slotParams.pos || slotName;
-						slotParams.src = slotMapSrc;
-
-						defineSlot(slotPath, slotNameGpt, slotParams);
-					}
+					defineSlotsQueue.push([slotPath, slotNameGpt, slotParams]);
 				}
-			}
 		}
 
-		log(['defineSlots', 'all slots defined'], 'debug', logGroup);
-	}
+		if (googletag.enableServices) {
+			googletag.enableServices();
+		}
+ 	}
 
 	function loadGpt() {
 		if (!gptLoaded) {
@@ -182,7 +178,6 @@ define('ext.wikia.adEngine.wikiaGptHelper', [
 				pubads = googletag.pubads();
 
 				defineSlotsQueue.start();
-				defineWikiaSlots();
 				setPageLevelParams();
 
 				pubads.collapseEmptyDivs();
@@ -285,9 +280,7 @@ define('ext.wikia.adEngine.wikiaGptHelper', [
 	}
 
 	return {
-		defineSlot: function() {
-			defineSlotsQueue.push([].slice.apply(arguments));
-		},
+		defineSlots: defineSlots,
 		pushAd: pushAd,
 		flushAds: flushAds
 	};

@@ -15,28 +15,7 @@ define('ext.wikia.adEngine.provider.turtle', [
 			TOP_RIGHT_BOXAD:    {size: '300x250', loc: 'top'}
 		};
 
-
-	function defineSlots() {
-		var slotName,
-			slotParams;
-
-		for (slotName in slotMap) {
-			if (slotMap.hasOwnProperty(slotName)) {
-				slotParams = slotMap[slotName];
-
-				slotParams.src = srcName;
-				slotParams.pos = slotName;
-
-				wikiaGpt.defineSlot(
-					'/98544404/Wikia/Testing',
-					slotName + '_' + srcName,
-					slotMap[slotName]
-				);
-			}
-		}
-	}
-
-	defineSlots();
+	wikiaGpt.defineSlots('turtle', slotMap, srcName);
 
 	function fillInSlot(slotname, success, hop) {
 		log(['fillInSlot', slotname], 5, logGroup);

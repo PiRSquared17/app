@@ -44,6 +44,8 @@ define('ext.wikia.adEngine.provider.remnantGpt', [
 		wikiaGpt.flushAds();
 	}
 
+	wikiaGpt.defineSlots('wikia', gptSlotConfig.getConfig(srcName), srcName);
+
 	return {
 		name: 'RemnantGpt',
 		canHandleSlot: canHandleSlot,
